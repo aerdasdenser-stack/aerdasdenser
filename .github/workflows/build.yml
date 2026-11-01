@@ -1,0 +1,35 @@
+name: Build
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -o aetherium-mod-source.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '4.9'
+      - name: Forge surumu sec
+        working-directory: aetherium-mod
+        run: |
+          for v in 14.23.5.2860 14.23.5.2859 14.23.5.2858 14.23.5.2856 14.23.5.2854 14.23.5.2847 14.23.5.2838 14.23.5.2815; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -L -I "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-$v/forge-1.12.2-$v-userdev.jar")
+            echo "$v -> $code"
+            if [ "$code" = "200" ]; then
+              sed -i "s/1.12.2-14.23.5.[0-9]*/1.12.2-$v/" build.gradle
+              break
+            fi
+          done
+          grep 'version = "1.12.2' build.gradle
+      - run: gradle setupCiWorkspace build --no-daemon
+        working-directory: aetherium-mod
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aetherium-jar
+          path: aetherium-mod/build/libs/*.jar
